@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">杭州公交报站语音库</string>
+    <string name="nav_subtitle">离线合成与播放</string>
+
+    <string name="label_config">配置</string>
+    <string name="label_line">线路</string>
+    <string name="btn_options">合成参数</string>
+    <string name="btn_load">加载配置与线路</string>
+
+    <string name="status_ready">状态：就绪</string>
+    <string name="status_resource_ready">状态：资源初始化完成</string>
+    <string name="status_mode_changed">状态：播放模式已切换为 %1$s</string>
+    <string name="status_options_saved">状态：合成参数已保存</string>
+    <string name="status_loading_hint">状态：正在预处理资源，首次加载可能稍慢…</string>
+    <string name="status_line_empty">状态：线路文件未读取到站点</string>
+    <string name="status_read_stations">状态：读取到 %1$d 个站点，开始合成…</string>
+    <string name="status_synth_item">状态：正在合成 %1$s</string>
+    <string name="status_synth_empty">状态：合成结果为空，请检查配置与资源</string>
+    <string name="status_ready_tracks">状态：就绪（共 %1$d 条）</string>
+    <string name="status_ready_with_missing">状态：就绪（%1$d 条，缺失 %2$d 个资源）</string>
+    <string name="status_load_failed">状态：加载失败：%1$s</string>
+    <string name="status_prepare_play">状态：准备播放 %1$s</string>
+    <string name="status_playing_track">状态：播放中 %1$s</string>
+    <string name="status_play_failed_no_segment">状态：播放失败，未找到可用音频片段</string>
+    <string name="status_exiting_cleanup">状态：正在清理缓存并退出…</string>
+    <string name="status_theme_applied">状态：已应用主题 %1$s</string>
+
+    <string name="opt_title">合成参数</string>
+    <string name="opt_external">外放模式（含英文）</string>
+    <string name="opt_next_station">包含下站语音</string>
+    <string name="opt_high_quality">优先高音质</string>
+    <string name="opt_missing_silence">英文缺失时：静音</string>
+    <string name="opt_missing_chinese">英文缺失时：使用中文替代</string>
+
+    <string name="mode_sequence">顺序播放</string>
+    <string name="mode_list_loop">列表循环</string>
+    <string name="mode_single">单曲循环</string>
+    <string name="mode_shuffle">随机播放</string>
+
+    <string name="volume_title">音量</string>
+    <string name="notify_channel_name">报站播放控制</string>
+    <string name="notify_channel_desc">用于状态栏和锁屏播放控制</string>
+    <string name="notify_line_title">线路：%1$s</string>
+
+    <string name="cd_menu">打开侧边栏</string>
+    <string name="cd_prev">上一首</string>
+    <string name="cd_play_pause">播放或暂停</string>
+    <string name="cd_next">下一首</string>
+    <string name="cd_mode">播放模式</string>
+    <string name="cd_volume">音量</string>
+
+    <string name="drawer_theme">主题</string>
+    <string name="drawer_about">关于</string>
+    <string name="theme_minimal">简约浅灰</string>
+    <string name="theme_ocean">深海蓝</string>
+    <string name="theme_forest">森林绿</string>
+    <string name="theme_system">跟随系统</string>
+    <string name="theme_sunset">日落橙</string>
+    <string name="theme_graphite">石墨夜色</string>
+
+    <string name="about_content">应用介绍：
+这是一个用于公交报站语音合成与播放的离线播放器。
+
+使用说明：
+1. 先在顶部选择配置和线路。
+2. 点击“加载配置与线路”生成可播放的报站列表。
+3. 在列表中点选项目即可播放，底部可切换播放模式、上一首、暂停/播放、下一首和音量。
+4. 侧边栏“主题”可切换三套界面风格。
+
+说明：
+状态栏会显示当前线路信息，兼容系统媒体播放卡片显示逻辑。</string>
+    <string name="about_section_intro">应用介绍</string>
+    <string name="about_section_intro_body">这是一个用于公交报站语音合成与播放的离线播放器，支持线路配置、站点语音合成与多种播放模式。</string>
+    <string name="about_section_usage">使用说明</string>
+    <string name="about_section_usage_body">1. 先选择配置与线路。\n2. 点击“加载配置与线路”生成报站列表。\n3. 点选列表播放，底部可切换模式、切歌与调音量。\n4. 侧边栏可切换主题。</string>
+    <string name="about_section_version">应用版本</string>
+    <string name="about_section_version_body">当前版本：%1$s</string>
+
+    <string name="guide_title">快速上手引导</string>
+    <string name="guide_step_1">1. 先在顶部选择配置与线路。</string>
+    <string name="guide_step_2">2. 点击“加载配置与线路”后会生成报站播放列表。</string>
+    <string name="guide_step_3">3. 通过底部按钮控制播放模式、切换上下条和音量。</string>
+    <string name="guide_step_4">4. 打开左上角菜单可切换主题与查看帮助说明。</string>
+
+    <string name="init_title">正在初始化</string>
+    <string name="init_starting">请稍候，正在准备资源…</string>
+    <string name="init_step_unpack">正在解包默认配置与线路…</string>
+    <string name="init_step_prewarm">正在建立音频索引与合成缓存…</string>
+    <string name="init_step_load_ui">正在加载界面数据…</string>
+    <string name="init_done">初始化完成</string>
+
+    <string name="common_ok">确定</string>
+    <string name="common_cancel">取消</string>
+    <string name="common_apply">应用</string>
+
+    <string name="toast_empty_source">配置或线路为空</string>
+    <string name="toast_reached_edge">已到列表边界</string>
+    <string name="toast_press_back_again">再按一次返回退出</string>
+    <string name="progress_time_text">%1$s / %2$s</string>
+
+    <string name="no_config">无可用配置</string>
+    <string name="no_line">无可用线路</string>
+    <string name="unknown_error">未知错误</string>
+    <string name="unknown_line">未知线路</string>
+    <string name="drawer_tutorial">教程</string>
+    <string name="drawer_haptic_on">震动反馈：开</string>
+    <string name="drawer_haptic_off">震动反馈：关</string>
+    <string name="status_haptic_on">状态：震动反馈已开启</string>
+    <string name="status_haptic_off">状态：震动反馈已关闭</string>
+
+    <string name="about_section_repo">项目链接</string>
+    <string name="about_section_repo_body">GitHub：点击打开仓库</string>
+    <string name="github_link">https://github.com/ldrwhc/SecureAudioPlayer</string>
+
+    <string name="guide_welcome">将通过高亮遮罩逐步介绍核心功能，点击“立即开始”进入引导。</string>
+    <string name="guide_start_now">立即开始</string>
+    <string name="guide_skip">跳过</string>
+    <string name="guide_step_title_1">选择配置与线路</string>
+    <string name="guide_step_title_2">加载配置与线路</string>
+    <string name="guide_step_title_3">查看可播放列表</string>
+    <string name="guide_step_title_4">播放控制</string>
+    <string name="guide_step_title_5">打开侧边栏</string>
+    <string name="guide_desc_playback">点击中间播放键可立即试听当前选中语音。</string>
+    <string name="guide_desc_menu">左上角菜单可进入主题、教程、震动开关与关于页面。</string>
+</resources>

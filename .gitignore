@@ -1,0 +1,14 @@
+# Gradle / Android
+.gradle/
+**/build/
+local.properties
+app/src/main/assets/payload/
+*.apk
+
+# IDE
+.idea/
+*.iml
+
+# OS
+Thumbs.db
+Desktop.ini
