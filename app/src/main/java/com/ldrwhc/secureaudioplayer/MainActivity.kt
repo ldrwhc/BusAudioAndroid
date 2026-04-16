@@ -13,6 +13,7 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
@@ -24,6 +25,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.ListView
 import android.widget.ProgressBar
 import android.widget.RadioButton
 import android.widget.RadioGroup
@@ -59,6 +61,9 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -600,6 +605,10 @@ class MainActivity : AppCompatActivity() {
             text = getString(R.string.opt_high_quality)
             isChecked = options.highQuality
         }
+        val cbSilentSynth = CheckBox(this).apply {
+            text = getString(R.string.opt_silent_synthesis)
+            isChecked = options.silentSynthesis
+        }
         val rgMissing = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
         val rbSilence = RadioButton(this).apply { text = getString(R.string.opt_missing_silence) }
         val rbChinese = RadioButton(this).apply { text = getString(R.string.opt_missing_chinese) }
@@ -610,6 +619,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(cbExternal)
         root.addView(cbNext)
         root.addView(cbHigh)
+        root.addView(cbSilentSynth)
         root.addView(rgMissing)
 
         AlertDialog.Builder(this)
@@ -619,6 +629,7 @@ class MainActivity : AppCompatActivity() {
                 options.externalBroadcast = cbExternal.isChecked
                 options.includeNextStation = cbNext.isChecked
                 options.highQuality = cbHigh.isChecked
+                options.silentSynthesis = cbSilentSynth.isChecked
                 options.missingEngUseChinese = rbChinese.isChecked
                 saveOptions()
                 setStatus(getString(R.string.status_options_saved))
@@ -661,18 +672,26 @@ class MainActivity : AppCompatActivity() {
                 setStatus(getString(R.string.status_read_stations, stations.size))
 
                 val result = withContext(Dispatchers.IO) {
-                    engine.buildSynthesisTracks(cfg, line, stations, options) { done, total, title ->
-                        val progress = 35 + if (total > 0) (done * 60 / total) else 0
-                        val now = System.currentTimeMillis()
-                        val shouldRefresh = now - lastSynthesisUiUpdateMs >= 150L || done == total
-                        if (shouldRefresh) {
-                            lastSynthesisUiUpdateMs = now
-                            runOnUiThread {
-                                binding.loadProgress.progress = progress
-                                setStatus(getString(R.string.status_synth_item, title))
+                    engine.buildSynthesisTracks(
+                        cfg,
+                        line,
+                        stations,
+                        options,
+                        stationPicker = { req ->
+                            chooseStationCandidateBlocking(req)
+                        },
+                    ) { done, total, title ->
+                            val progress = 35 + if (total > 0) (done * 60 / total) else 0
+                            val now = System.currentTimeMillis()
+                            val shouldRefresh = now - lastSynthesisUiUpdateMs >= 150L || done == total
+                            if (shouldRefresh) {
+                                lastSynthesisUiUpdateMs = now
+                                runOnUiThread {
+                                    binding.loadProgress.progress = progress
+                                    setStatus(getString(R.string.status_synth_item, title))
+                                }
                             }
                         }
-                    }
                 }
 
                 tracks = result.tracks
@@ -733,6 +752,121 @@ class MainActivity : AppCompatActivity() {
                 appendLog("ERROR: synthesis failed - ${t.message ?: getString(R.string.unknown_error)}")
             }
         }
+    }
+
+    private fun chooseStationCandidateBlocking(req: StationPickRequest): Int? {
+        if (options.silentSynthesis || req.candidates.size <= 1) return req.defaultSourceIndex
+
+        val pickedRef = AtomicReference<Int?>(req.defaultSourceIndex)
+        val done = AtomicBoolean(false)
+        val latch = CountDownLatch(1)
+
+        runOnUiThread {
+            var previewPlayer: MediaPlayer? = null
+
+            fun finishOnce(value: Int?) {
+                pickedRef.set(value)
+                if (done.compareAndSet(false, true)) {
+                    runCatching {
+                        previewPlayer?.stop()
+                    }
+                    runCatching {
+                        previewPlayer?.release()
+                    }
+                    previewPlayer = null
+                    latch.countDown()
+                }
+            }
+
+            val title = getString(
+                R.string.pick_dialog_title,
+                req.stationName,
+                if (req.isChinese) getString(R.string.pick_lang_zh) else getString(R.string.pick_lang_en)
+            )
+            val itemNames = req.candidates.map { it.displayName }
+            val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_single_choice, itemNames)
+            val listView = ListView(this).apply {
+                choiceMode = ListView.CHOICE_MODE_SINGLE
+                this.adapter = adapter
+                dividerHeight = 1
+            }
+            val defaultPos = req.candidates.indexOfFirst { it.sourceIndex == req.defaultSourceIndex }.let {
+                if (it >= 0) it else 0
+            }
+            listView.setItemChecked(defaultPos, true)
+
+            val previewBtn = android.widget.Button(this).apply {
+                text = getString(R.string.pick_preview)
+            }
+
+            val root = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(28, 20, 28, 10)
+                addView(
+                    listView,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        0,
+                        1f
+                    )
+                )
+                addView(
+                    previewBtn,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply { topMargin = dp(10) }
+                )
+            }
+
+            val dialog = AlertDialog.Builder(this)
+                .setTitle(title)
+                .setView(root)
+                .setPositiveButton(getString(R.string.pick_select), null)
+                .setNegativeButton(getString(R.string.common_cancel), null)
+                .setOnCancelListener { finishOnce(req.defaultSourceIndex) }
+                .create()
+
+            previewBtn.setOnClickListener {
+                val pos = listView.checkedItemPosition.let { if (it in req.candidates.indices) it else defaultPos }
+                val sourceIndex = req.candidates[pos].sourceIndex
+                val path = engine.resolveSegmentFilePath(SegmentRef.Source(sourceIndex))
+                if (path.isNullOrBlank() || !File(path).exists()) {
+                    Toast.makeText(this, getString(R.string.pick_preview_failed), Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                runCatching {
+                    previewPlayer?.stop()
+                    previewPlayer?.release()
+                }
+                previewPlayer = MediaPlayer().apply {
+                    setDataSource(path)
+                    setOnCompletionListener {
+                        runCatching { it.release() }
+                        if (previewPlayer === it) previewPlayer = null
+                    }
+                    prepare()
+                    start()
+                }
+            }
+
+            dialog.setOnShowListener {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val pos = listView.checkedItemPosition.let { if (it in req.candidates.indices) it else defaultPos }
+                    finishOnce(req.candidates[pos].sourceIndex)
+                    dialog.dismiss()
+                }
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                    finishOnce(req.defaultSourceIndex)
+                    dialog.dismiss()
+                }
+            }
+
+            dialog.show()
+        }
+
+        latch.await()
+        return pickedRef.get()
     }
 
     private fun playTrack(index: Int) {
@@ -1481,6 +1615,7 @@ class MainActivity : AppCompatActivity() {
         options.includeNextStation = prefs.getBoolean("opt_next", true)
         options.highQuality = prefs.getBoolean("opt_high", true)
         options.missingEngUseChinese = prefs.getBoolean("opt_missing_zh", true)
+        options.silentSynthesis = prefs.getBoolean("opt_silent_synth", true)
         hapticEnabled = prefs.getBoolean("opt_haptic", true)
         playbackMode = runCatching {
             PlaybackMode.valueOf(
@@ -1498,6 +1633,7 @@ class MainActivity : AppCompatActivity() {
             .putBoolean("opt_next", options.includeNextStation)
             .putBoolean("opt_high", options.highQuality)
             .putBoolean("opt_missing_zh", options.missingEngUseChinese)
+            .putBoolean("opt_silent_synth", options.silentSynthesis)
             .apply()
     }
 

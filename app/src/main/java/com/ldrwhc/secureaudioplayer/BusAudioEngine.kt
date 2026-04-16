@@ -173,6 +173,7 @@ class BusAudioEngine(private val context: Context) {
         lineFile: File,
         stations: List<String>,
         options: SynthesisOptions,
+        stationPicker: ((StationPickRequest) -> Int?)? = null,
         progressCb: ((done: Int, total: Int, title: String) -> Unit)? = null,
     ): SynthesisBuildResult {
         if (stations.isEmpty()) {
@@ -223,7 +224,7 @@ class BusAudioEngine(private val context: Context) {
             val key = "${if (isChinese) "zh" else "en"}|${name.trim()}|${if (options.highQuality) 1 else 0}|${if (options.missingEngUseChinese) 1 else 0}"
             if (stationSegCache.containsKey(key)) return stationSegCache[key]
             val cleanName = name.trim()
-            val idx = selectStationSourceIndex(cleanName, isChinese, options, stationSelectCache)
+            val idx = selectStationSourceIndex(cleanName, isChinese, options, stationSelectCache, stationPicker)
             val out = if (idx >= 0) {
                 matchedStationKeys += key.substringBeforeLast("|")
                 if (stationLogDedup.add(key)) {
@@ -580,42 +581,75 @@ class BusAudioEngine(private val context: Context) {
         return score
     }
 
-    private fun selectStationSourceIndex(
+    private fun collectStationSourceCandidates(
         stationName: String,
         isChinese: Boolean,
         options: SynthesisOptions,
-        cache: MutableMap<String, Int>,
-    ): Int {
+    ): List<Int> {
         val clean = stationName.trim()
-        if (clean.isEmpty()) return -1
-        val cacheKey = "${if (isChinese) "zh" else "en"}|$clean|${if (options.highQuality) 1 else 0}"
-        cache[cacheKey]?.let { return it }
+        if (clean.isEmpty()) return emptyList()
 
-        val exactCandidates = mutableListOf<Int>()
-        var best = -1
-        var bestScore = Int.MIN_VALUE
+        val ranked = mutableListOf<Pair<Int, Int>>()
         for (i in sources.indices) {
             val s = sources[i]
             if (isChinese && s.isEnglish) continue
             if (!isChinese && !s.isEnglish) continue
             if (!isStationFileMatch(clean, s.stem)) continue
-            if (s.stem == clean) exactCandidates += i
-            val score = stationSourceScore(clean, s)
-            if (score > bestScore) {
-                bestScore = score
-                best = i
-            }
+            ranked += i to stationSourceScore(clean, s)
+        }
+        if (ranked.isEmpty()) return emptyList()
+
+        val filtered = if (options.highQuality) {
+            val exact = ranked.filter { sources[it.first].stem == clean }
+            if (exact.isNotEmpty()) exact else ranked
+        } else {
+            ranked
         }
 
-        if (options.highQuality && exactCandidates.isNotEmpty()) {
-            best = -1
-            bestScore = Int.MIN_VALUE
-            exactCandidates.forEach { idx ->
-                val score = stationSourceScore(clean, sources[idx])
-                if (score > bestScore) {
-                    bestScore = score
-                    best = idx
-                }
+        return filtered
+            .sortedWith(
+                compareByDescending<Pair<Int, Int>> { it.second }
+                    .thenBy { sources[it.first].baseFileName.length }
+                    .thenBy { sources[it.first].baseFileName.lowercase(Locale.getDefault()) }
+            )
+            .map { it.first }
+    }
+
+    private fun selectStationSourceIndex(
+        stationName: String,
+        isChinese: Boolean,
+        options: SynthesisOptions,
+        cache: MutableMap<String, Int>,
+        stationPicker: ((StationPickRequest) -> Int?)? = null,
+    ): Int {
+        val clean = stationName.trim()
+        if (clean.isEmpty()) return -1
+        val cacheKey =
+            "${if (isChinese) "zh" else "en"}|$clean|${if (options.highQuality) 1 else 0}|${if (options.silentSynthesis) 1 else 0}"
+        cache[cacheKey]?.let { return it }
+
+        val candidates = collectStationSourceCandidates(clean, isChinese, options)
+        if (candidates.isEmpty()) {
+            cache[cacheKey] = -1
+            return -1
+        }
+
+        var best = candidates.first()
+        if (!options.silentSynthesis && candidates.size > 1 && stationPicker != null) {
+            val req = StationPickRequest(
+                stationName = clean,
+                isChinese = isChinese,
+                candidates = candidates.map { idx ->
+                    StationCandidate(
+                        sourceIndex = idx,
+                        displayName = sources[idx].baseFileName,
+                    )
+                },
+                defaultSourceIndex = best,
+            )
+            val picked = runCatching { stationPicker(req) }.getOrNull()
+            if (picked != null && picked in candidates) {
+                best = picked
             }
         }
 

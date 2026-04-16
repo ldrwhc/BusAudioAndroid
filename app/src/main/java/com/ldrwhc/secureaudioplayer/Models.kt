@@ -73,6 +73,19 @@ data class SynthesisOptions(
     var includeNextStation: Boolean = true,
     var highQuality: Boolean = true,
     var missingEngUseChinese: Boolean = true,
+    var silentSynthesis: Boolean = true,
+)
+
+data class StationCandidate(
+    val sourceIndex: Int,
+    val displayName: String,
+)
+
+data class StationPickRequest(
+    val stationName: String,
+    val isChinese: Boolean,
+    val candidates: List<StationCandidate>,
+    val defaultSourceIndex: Int,
 )
 
 data class BuildResult(

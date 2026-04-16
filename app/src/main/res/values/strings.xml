@@ -30,8 +30,15 @@
     <string name="opt_external">外放模式（含英文）</string>
     <string name="opt_next_station">包含下站语音</string>
     <string name="opt_high_quality">优先高音质</string>
+    <string name="opt_silent_synthesis">静默合成（多候选自动选最佳）</string>
     <string name="opt_missing_silence">英文缺失时：静音</string>
     <string name="opt_missing_chinese">英文缺失时：使用中文替代</string>
+    <string name="pick_dialog_title">%1$s - 选择%2音频</string>
+    <string name="pick_lang_zh">中文</string>
+    <string name="pick_lang_en">英文</string>
+    <string name="pick_preview">试听</string>
+    <string name="pick_select">选择</string>
+    <string name="pick_preview_failed">试听失败，文件不可用</string>
 
     <string name="mode_sequence">顺序播放</string>
     <string name="mode_list_loop">列表循环</string>
